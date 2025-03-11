@@ -1,4 +1,3 @@
-// backend/routes/faculty.js
 const express = require('express');
 const router = express.Router();
 const data = require('../data');
@@ -16,12 +15,29 @@ function isTimeOverlap(start1, end1, start2, end2) {
 
 // Create a new booking request
 router.post('/booking', (req, res) => {
-    const { facultyId, eventName, coordinator, eventType, date, startTime, endTime, description } = req.body;
+    // 1. Include coordinatorContact in destructuring
+    const { 
+        facultyId, 
+        eventName, 
+        coordinator, 
+        coordinatorContact,  // <-- NEW
+        eventType, 
+        date, 
+        startTime, 
+        endTime, 
+        description 
+    } = req.body;
     
+    // 2. Decide if coordinatorContact is required
+    //    If yes, check for it here:
     if (!facultyId || !eventName || !coordinator || !eventType || !date || !startTime || !endTime) {
         return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    
+    // If you also want coordinatorContact required, add a check:
+    // if (!coordinatorContact) {
+    //   return res.status(400).json({ success: false, message: 'Missing coordinator contact' });
+    // }
+
     // Convert times to minutes
     const newStart = timeToMinutes(startTime);
     const newEnd = timeToMinutes(endTime);
@@ -37,7 +53,10 @@ router.post('/booking', (req, res) => {
     });
 
     if(conflict) {
-        return res.status(400).json({ success: false, message: 'Booking conflict: The selected time slot is already taken.' });
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Booking conflict: The selected time slot is already taken.' 
+        });
     }
 
     const id = data.bookings.length + 1;
@@ -46,6 +65,7 @@ router.post('/booking', (req, res) => {
         facultyId,
         eventName,
         coordinator,
+        coordinatorContact, // <-- NEW field in booking
         eventType,
         date,
         startTime,
@@ -89,9 +109,13 @@ router.put('/booking/:id', (req, res) => {
                 return false;
             });
             if(conflict) {
-                return res.status(400).json({ success: false, message: 'Booking conflict: The selected time slot is already taken.' });
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Booking conflict: The selected time slot is already taken.' 
+                });
             }
         }
+        // 3. Merge new fields (including coordinatorContact if provided) into booking
         Object.assign(booking, req.body);
         res.json({ success: true, booking });
     } else {
