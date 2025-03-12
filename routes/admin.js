@@ -1,4 +1,3 @@
-// backend/routes/admin.js
 const express = require('express');
 const router = express.Router();
 const data = require('../data');
@@ -50,9 +49,24 @@ router.delete('/faculty/:id', (req, res) => {
 
 // ---------- Booking Management for Admin ----------
 
-// Get all bookings
+// Get bookings with optional filtering by status, date, and startTime
 router.get('/bookings', (req, res) => {
-    res.json({ success: true, bookings: data.bookings });
+    let bookings = data.bookings;
+    const { status, date, startTime } = req.query;
+
+    // Filter by status if provided and not "All"
+    if (status && status !== 'All') {
+        bookings = bookings.filter(b => b.status === status);
+    }
+    // Filter by date if provided
+    if (date) {
+        bookings = bookings.filter(b => b.date === date);
+    }
+    // Filter by startTime if provided
+    if (startTime) {
+        bookings = bookings.filter(b => b.startTime === startTime);
+    }
+    res.json({ success: true, bookings });
 });
 
 // Update booking status (approve or reject)
