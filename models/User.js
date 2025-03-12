@@ -3,6 +3,20 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
 
 const User = sequelize.define('User', {
+  // New fields for faculty details:
+  name: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  department: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  position: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  // Existing fields:
   username: {
     type: DataTypes.STRING,
     allowNull: false,
