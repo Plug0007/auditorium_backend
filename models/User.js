@@ -35,6 +35,11 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('admin', 'faculty'),
     allowNull: false,
     defaultValue: 'faculty'
+  },
+  // New field for storing the OneSignal Player ID
+  onesignalId: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   timestamps: true
