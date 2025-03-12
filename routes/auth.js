@@ -7,13 +7,15 @@ const User = require('../models/User');
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    // Find user by username and password (plaintext; hash in production)
+    
+    // Note: In production, you should store and compare hashed passwords.
     const user = await User.findOne({ where: { username, password } });
-    if (user) {
-      res.json({ success: true, user });
-    } else {
-      res.status(401).json({ success: false, message: 'Invalid credentials' });
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+    
+    res.json({ success: true, user });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
