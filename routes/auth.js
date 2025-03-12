@@ -1,24 +1,23 @@
 // backend/routes/auth.js
 const express = require('express');
 const router = express.Router();
-const data = require('../data');
+const User = require('../models/User');
 
-router.post('/login', (req, res) => {
+// Login route: Check credentials for both admin and faculty
+router.post('/login', async (req, res) => {
+  try {
     const { username, password } = req.body;
-    // First check in admin users
-    let user = data.users.find(u => u.username === username && u.password === password);
-    if (!user) {
-      // Also check in faculty accounts
-      user = data.faculties.find(u => u.username === username && u.password === password);
-      if(user) {
-          user.role = 'faculty'; // Ensure role is set
-      }
-    }
+    // Find user by username and password (plaintext; hash in production)
+    const user = await User.findOne({ where: { username, password } });
     if (user) {
-        res.json({ success: true, user });
+      res.json({ success: true, user });
     } else {
-        res.status(401).json({ success: false, message: 'Invalid credentials' });
+      res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 });
 
 module.exports = router;
