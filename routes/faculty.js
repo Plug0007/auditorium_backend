@@ -15,7 +15,6 @@ function isTimeOverlap(start1, end1, start2, end2) {
 
 // Create a new booking request (auto-approved)
 router.post('/booking', (req, res) => {
-  // Include coordinatorContact in destructuring
   const { 
     facultyId, 
     eventName, 
@@ -28,16 +27,14 @@ router.post('/booking', (req, res) => {
     description 
   } = req.body;
   
-  // Check for required fields
   if (!facultyId || !eventName || !coordinator || !eventType || !date || !startTime || !endTime) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
   }
 
-  // Convert times to minutes
   const newStart = timeToMinutes(startTime);
   const newEnd = timeToMinutes(endTime);
 
-  // Check for overlapping booking on same date (if status is not Rejected)
+  // Check for overlapping booking on same date (ignoring Rejected bookings)
   const conflict = data.bookings.find(b => {
     if (b.date === date && b.status !== 'Rejected') {
       const existingStart = timeToMinutes(b.startTime);
@@ -55,19 +52,18 @@ router.post('/booking', (req, res) => {
   }
 
   const id = data.bookings.length + 1;
-  // Auto-approval: status is set to "Approved" immediately.
   const newBooking = {
     id,
     facultyId,
     eventName,
     coordinator,
-    coordinatorContact, // NEW field added here
+    coordinatorContact, // NEW field in booking
     eventType,
     date,
     startTime,
     endTime,
     description,
-    status: 'Approved'
+    status: 'Approved' // Auto-approved on creation
   };
   data.bookings.push(newBooking);
   res.json({ success: true, newBooking });
@@ -83,15 +79,14 @@ router.get('/bookings', (req, res) => {
   res.json({ success: true, bookings: facultyBookings });
 });
 
-// Update a booking (only if status is Pending)
-// Note: With auto-approval, this route may rarely be used since bookings start as Approved.
-// You may choose to relax this check if you want to allow edits.
+// Update a booking (allowed if not Rejected)
 router.put('/booking/:id', (req, res) => {
   const bookingId = parseInt(req.params.id);
   const booking = data.bookings.find(b => b.id === bookingId);
   if (booking) {
-    if (booking.status !== 'Pending') {
-      return res.status(400).json({ success: false, message: 'Only pending bookings can be updated' });
+    // Disallow updates if the booking is Rejected
+    if (booking.status === 'Rejected') {
+      return res.status(400).json({ success: false, message: 'Rejected bookings cannot be updated' });
     }
     // If updating time/date, check for conflict
     const { date, startTime, endTime } = req.body;
