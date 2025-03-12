@@ -1,6 +1,8 @@
+// backend/routes/faculty.js
 const express = require('express');
 const router = express.Router();
-const data = require('../data');
+const { Op } = require('sequelize');
+const Booking = require('../models/Booking');
 
 // Helper: Convert "HH:MM" string to minutes since midnight
 function timeToMinutes(timeStr) {
@@ -14,77 +16,91 @@ function isTimeOverlap(start1, end1, start2, end2) {
 }
 
 // Create a new booking request (auto-approved)
-router.post('/booking', (req, res) => {
-  const { 
-    facultyId, 
-    eventName, 
-    coordinator, 
-    coordinatorContact,  // <-- NEW
-    eventType, 
-    date, 
-    startTime, 
-    endTime, 
-    description 
-  } = req.body;
-  
-  if (!facultyId || !eventName || !coordinator || !eventType || !date || !startTime || !endTime) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
-  }
+router.post('/booking', async (req, res) => {
+  try {
+    const { 
+      facultyId, 
+      eventName, 
+      coordinator, 
+      coordinatorContact,  // NEW
+      eventType, 
+      date, 
+      startTime, 
+      endTime, 
+      description 
+    } = req.body;
+    
+    if (!facultyId || !eventName || !coordinator || !eventType || !date || !startTime || !endTime) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
 
-  const newStart = timeToMinutes(startTime);
-  const newEnd = timeToMinutes(endTime);
+    const newStart = timeToMinutes(startTime);
+    const newEnd = timeToMinutes(endTime);
 
-  // Check for overlapping booking on same date (ignoring Rejected bookings)
-  const conflict = data.bookings.find(b => {
-    if (b.date === date && b.status !== 'Rejected') {
+    // Check for overlapping booking on the same date (ignoring Rejected bookings)
+    const conflicts = await Booking.findAll({
+      where: {
+        date,
+        status: { [Op.ne]: 'Rejected' }
+      }
+    });
+
+    const conflict = conflicts.find(b => {
       const existingStart = timeToMinutes(b.startTime);
       const existingEnd = timeToMinutes(b.endTime);
       return isTimeOverlap(newStart, newEnd, existingStart, existingEnd);
-    }
-    return false;
-  });
-
-  if (conflict) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Booking conflict: The selected time slot is already taken.' 
     });
-  }
 
-  const id = data.bookings.length + 1;
-  const newBooking = {
-    id,
-    facultyId,
-    eventName,
-    coordinator,
-    coordinatorContact, // NEW field in booking
-    eventType,
-    date,
-    startTime,
-    endTime,
-    description,
-    status: 'Approved' // Auto-approved on creation
-  };
-  data.bookings.push(newBooking);
-  res.json({ success: true, newBooking });
+    if (conflict) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Booking conflict: The selected time slot is already taken.' 
+      });
+    }
+
+    const newBooking = await Booking.create({
+      facultyId,
+      eventName,
+      coordinator,
+      coordinatorContact,
+      eventType,
+      date,
+      startTime,
+      endTime,
+      description,
+      status: 'Approved' // Auto-approved on creation
+    });
+
+    res.json({ success: true, newBooking });
+  } catch (err) {
+    console.error('Error creating booking:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 });
 
 // Get bookings for a specific faculty (via query parameter)
-router.get('/bookings', (req, res) => {
-  const facultyId = parseInt(req.query.facultyId);
-  if (!facultyId) {
-    return res.status(400).json({ success: false, message: 'facultyId query parameter required' });
+router.get('/bookings', async (req, res) => {
+  try {
+    const facultyId = parseInt(req.query.facultyId);
+    if (!facultyId) {
+      return res.status(400).json({ success: false, message: 'facultyId query parameter required' });
+    }
+    const bookings = await Booking.findAll({ where: { facultyId } });
+    res.json({ success: true, bookings });
+  } catch (err) {
+    console.error('Error fetching faculty bookings:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
-  const facultyBookings = data.bookings.filter(b => b.facultyId === facultyId);
-  res.json({ success: true, bookings: facultyBookings });
 });
 
 // Update a booking (allowed if not Rejected)
-router.put('/booking/:id', (req, res) => {
-  const bookingId = parseInt(req.params.id);
-  const booking = data.bookings.find(b => b.id === bookingId);
-  if (booking) {
-    // Disallow updates if the booking is Rejected
+router.put('/booking/:id', async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const booking = await Booking.findByPk(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
     if (booking.status === 'Rejected') {
       return res.status(400).json({ success: false, message: 'Rejected bookings cannot be updated' });
     }
@@ -93,14 +109,21 @@ router.put('/booking/:id', (req, res) => {
     if (date && startTime && endTime) {
       const newStart = timeToMinutes(startTime);
       const newEnd = timeToMinutes(endTime);
-      const conflict = data.bookings.find(b => {
-        if (b.id !== bookingId && b.date === date && b.status !== 'Rejected') {
-          const existingStart = timeToMinutes(b.startTime);
-          const existingEnd = timeToMinutes(b.endTime);
-          return isTimeOverlap(newStart, newEnd, existingStart, existingEnd);
+      
+      const conflicts = await Booking.findAll({
+        where: {
+          id: { [Op.ne]: bookingId },
+          date,
+          status: { [Op.ne]: 'Rejected' }
         }
-        return false;
       });
+
+      const conflict = conflicts.find(b => {
+        const existingStart = timeToMinutes(b.startTime);
+        const existingEnd = timeToMinutes(b.endTime);
+        return isTimeOverlap(newStart, newEnd, existingStart, existingEnd);
+      });
+
       if (conflict) {
         return res.status(400).json({ 
           success: false, 
@@ -108,10 +131,12 @@ router.put('/booking/:id', (req, res) => {
         });
       }
     }
-    Object.assign(booking, req.body);
+
+    await booking.update(req.body);
     res.json({ success: true, booking });
-  } else {
-    res.status(404).json({ success: false, message: 'Booking not found' });
+  } catch (err) {
+    console.error('Error updating booking:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
