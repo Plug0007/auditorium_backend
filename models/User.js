@@ -3,7 +3,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../db');
 
 const User = sequelize.define('User', {
-  // New fields for faculty details:
+  // Faculty details
   name: {
     type: DataTypes.STRING,
     allowNull: true
@@ -16,7 +16,7 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true
   },
-  // Existing fields:
+  // Authentication fields
   username: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -36,7 +36,7 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 'faculty'
   },
-  // New field for storing the OneSignal Player ID
+  // New field for push notifications (OneSignal)
   onesignalId: {
     type: DataTypes.STRING,
     allowNull: true
