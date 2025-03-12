@@ -10,20 +10,27 @@ const Booking = require('../models/Booking');
 // Create new faculty account
 router.post('/faculty', async (req, res) => {
   try {
+    // Destructure the fields from the request body
     const { name, department, position, username, password } = req.body;
+    
     // Check if username exists
     const exists = await User.findOne({ where: { username } });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Username already exists' });
     }
-    // Create a new faculty user (using a dummy email; extend as needed)
+    
+    // Create a new faculty user.
+    // Using a dummy email here, modify as needed.
     const newFaculty = await User.create({
+      name,
+      department,
+      position,
       username,
       email: `${username}@example.com`,
       password,
       role: 'faculty'
-      // Optionally, you could store extra faculty details in a separate model/table.
     });
+    
     res.json({ success: true, newFaculty });
   } catch (err) {
     console.error('Error creating faculty:', err);
