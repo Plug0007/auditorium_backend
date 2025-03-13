@@ -4,7 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
-const sequelize = require('./db'); // Import the PostgreSQL database connection
+const { facultyDB, bookingDB } = require('./db');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const facultyRoutes = require('./routes/faculty');
@@ -22,10 +22,13 @@ app.use('/api/faculty', facultyRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-// Sync Sequelize models with PostgreSQL and then start the server
-sequelize.sync({ alter: true })
+// Sync both databases before starting the server
+Promise.all([
+  facultyDB.sync({ alter: true }),
+  bookingDB.sync({ alter: true })
+])
   .then(() => {
-    console.log('Models synchronized with the PostgreSQL database.');
+    console.log('Models synchronized with both PostgreSQL databases.');
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch(err => console.error('Error syncing models:', err));
