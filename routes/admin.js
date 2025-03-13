@@ -10,7 +10,6 @@ const Booking = require('../models/Booking');
 // Create new faculty account
 router.post('/faculty', async (req, res) => {
   try {
-    // Destructure the fields from the request body
     const { name, department, position, username, password } = req.body;
     
     // Check if username exists
@@ -20,7 +19,6 @@ router.post('/faculty', async (req, res) => {
     }
     
     // Create a new faculty user.
-    // Using a dummy email here, modify as needed.
     const newFaculty = await User.create({
       name,
       department,
