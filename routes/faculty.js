@@ -22,7 +22,7 @@ router.post('/booking', async (req, res) => {
       facultyId, 
       eventName, 
       coordinator, 
-      coordinatorContact,  // NEW
+      coordinatorContact,
       eventType, 
       date, 
       startTime, 
